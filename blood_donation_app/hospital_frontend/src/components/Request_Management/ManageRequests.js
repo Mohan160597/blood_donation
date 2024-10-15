@@ -1,28 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import styled from 'styled-components';
+import { FaEdit, FaSave, FaTrash } from 'react-icons/fa';
 
 const ManageRequests = () => {
   const [requests, setRequests] = useState([]);
   const [filteredRequests, setFilteredRequests] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingId, setEditingId] = useState(null); // Track which request is being edited
-  const [editingStatus, setEditingStatus] = useState(''); // Track the status being edited
-  const [editingQuantity, setEditingQuantity] = useState(''); // Track the quantity being edited
-  const [message, setMessage] = useState(''); // Success or error message
+  const [editingId, setEditingId] = useState(null);
+  const [editingStatus, setEditingStatus] = useState('');
+  const [editingQuantity, setEditingQuantity] = useState('');
+  const [message, setMessage] = useState('');
 
   // Fetch requests from the API
   useEffect(() => {
     const fetchRequests = async () => {
       try {
         const accessToken = localStorage.getItem('accessToken');
-        const response = await axios.get('http://192.168.35.11:8000/api/blood-requests/', {
+        const response = await axios.get('http://192.168.1.124:8000/api/blood-requests/', {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         });
         setRequests(response.data);
-        setFilteredRequests(response.data); // Set initial filtered requests
+        setFilteredRequests(response.data);
       } catch (error) {
         console.error('Error fetching blood requests:', error);
       }
@@ -46,9 +47,8 @@ const ManageRequests = () => {
   const handleSaveChanges = async (id) => {
     try {
       const accessToken = localStorage.getItem('accessToken');
-      // Make a PUT request to update the status and quantity of the blood request
       await axios.put(
-        `http://192.168.94.11:8000/api/blood-requests/${id}/`,
+        `http://192.168.1.124:8000/api/blood-requests/${id}/`,
         { status: editingStatus, quantity: editingQuantity },
         {
           headers: {
@@ -57,17 +57,16 @@ const ManageRequests = () => {
         }
       );
 
-      // Update the local state after saving to the server
       const updatedRequests = requests.map((req) =>
         req.id === id ? { ...req, status: editingStatus, quantity: editingQuantity } : req
       );
       setRequests(updatedRequests);
       setFilteredRequests(updatedRequests);
-      setEditingId(null); // Stop editing after successful update
-      setMessage('Request saved successfully!'); // Show success message
+      setEditingId(null);
+      setMessage('Request saved successfully!');
     } catch (error) {
       console.error('Error updating request:', error);
-      setMessage('Failed to save request.'); // Show error message
+      setMessage('Failed to save request.');
     }
   };
 
@@ -103,7 +102,7 @@ const ManageRequests = () => {
               <td>{request.blood_type}</td>
               <td>
                 {editingId === request.id ? (
-                  <input
+                  <Input
                     type="number"
                     value={editingQuantity}
                     onChange={(e) => setEditingQuantity(e.target.value)}
@@ -115,31 +114,33 @@ const ManageRequests = () => {
               </td>
               <td>
                 {editingId === request.id ? (
-                  <select
+                  <Select
                     value={editingStatus}
                     onChange={(e) => setEditingStatus(e.target.value)}
                   >
                     <option value="Pending">Pending</option>
                     <option value="Completed">Completed</option>
                     <option value="Cancelled">Cancelled</option>
-                  </select>
+                  </Select>
                 ) : (
                   request.status
                 )}
               </td>
               <td>
                 {editingId === request.id ? (
-                  <button onClick={() => handleSaveChanges(request.id)}>Save</button>
+                  <ActionButton onClick={() => handleSaveChanges(request.id)}>
+                    <FaSave /> Save
+                  </ActionButton>
                 ) : (
-                  <button
+                  <ActionButton
                     onClick={() => {
                       setEditingId(request.id);
-                      setEditingStatus(request.status); // Set the initial status value for editing
-                      setEditingQuantity(request.quantity); // Set the initial quantity value for editing
+                      setEditingStatus(request.status);
+                      setEditingQuantity(request.quantity);
                     }}
                   >
-                    Edit
-                  </button>
+                    <FaEdit /> Edit
+                  </ActionButton>
                 )}
               </td>
             </tr>
@@ -151,14 +152,14 @@ const ManageRequests = () => {
 };
 
 // Styled components
-
 const ManageContainer = styled.div`
   max-width: 800px;
   margin: 50px auto;
   padding: 20px;
   background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 10px; /* Increased border-radius */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  font-family: 'Arial', sans-serif; /* Modern font */
 `;
 
 const SearchInput = styled.input`
@@ -166,22 +167,80 @@ const SearchInput = styled.input`
   padding: 12px;
   margin-bottom: 20px;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 6px; /* Increased border-radius */
   font-size: 16px;
+  transition: border 0.3s;
+
+  &:focus {
+    border-color: #007bff; /* Focused border color */
+    outline: none; /* Remove outline */
+  }
 `;
 
 const RequestTable = styled.table`
   width: 100%;
   border-collapse: collapse;
 
-  th, td {
+  th,
+  td {
     border: 1px solid #ddd;
-    padding: 8px;
+    padding: 12px; /* Increased padding for better spacing */
+    text-align: left; /* Align text to the left */
   }
 
   th {
-    background-color: #f2f2f2;
-    text-align: left;
+    background-color: #f8f9fa; /* Light background for headers */
+    font-weight: bold; /* Bold font for headers */
+  }
+
+  tr:hover {
+    background-color: #f1f1f1; /* Highlight row on hover */
+  }
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: border 0.3s;
+
+  &:focus {
+    border-color: #007bff; /* Focused border color */
+    outline: none; /* Remove outline */
+  }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: border 0.3s;
+
+  &:focus {
+    border-color: #007bff; /* Focused border color */
+    outline: none; /* Remove outline */
+  }
+`;
+
+const ActionButton = styled.button`
+  background-color: #007bff; /* Primary button color */
+  color: white;
+  border: none;
+  border-radius: 4px; /* Rounded corners */
+  padding: 8px 12px; /* Button padding */
+  cursor: pointer;
+  font-size: 16px;
+  display: flex; /* Flex layout for icon and text */
+  align-items: center; /* Center icon and text */
+  gap: 5px; /* Space between icon and text */
+  transition: background-color 0.3s;
+
+  &:hover {
+    background-color: #0056b3; /* Darker shade on hover */
   }
 `;
 

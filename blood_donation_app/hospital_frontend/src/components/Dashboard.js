@@ -1,13 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FaBell, FaHome, FaUser, FaServicestack, FaSignOutAlt } from "react-icons/fa";
-import styled from 'styled-components';
-import { Link, useNavigate } from 'react-router-dom';  // Import Link and useNavigate
+import React, { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom"; // Import useLocation
+import {
+  FaBell,
+  FaHome,
+  FaUser,
+  FaServicestack,
+  FaSignOutAlt,
+} from "react-icons/fa";
+import styled from "styled-components";
+import { Link, useNavigate } from "react-router-dom"; // Import Link and useNavigate
 
-const Dashboard = ({children}) => {
+const Dashboard = ({ children }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [currentPath, setCurrentPath] = useState(""); // State to track the current path
   const dropdownRef = useRef(null);
   const navigate = useNavigate(); // useNavigate hook for navigation
+  const location = useLocation(); // Get the current location
 
   const toggleNotification = () => {
     setIsNotificationOpen(!isNotificationOpen);
@@ -26,38 +35,44 @@ const Dashboard = ({children}) => {
     };
 
     if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     } else {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isDropdownOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem('accessToken'); // Clear access token
-    localStorage.removeItem('refreshToken'); // Clear refresh token
-    navigate('/login'); // Redirect to login page
+    localStorage.removeItem("accessToken"); // Clear access token
+    localStorage.removeItem("refreshToken"); // Clear refresh token
+    navigate("/login"); // Redirect to login page
   };
+
+  // Update currentPath whenever location changes
+  useEffect(() => {
+    setCurrentPath(location.pathname);
+  }, [location]);
 
   return (
     <DashboardContainer>
       <Header>
         <Logo src="/logo.png" alt="Logo" />
         <Menu>
-          <MenuItem><FaHome /> Home</MenuItem>
+          <MenuItem as={Link} to="/dashboard/home">
+            <FaHome /> Home
+          </MenuItem>
 
-          {/* Click-to-open dropdown for Services */}
           <ServicesMenu ref={dropdownRef}>
             <MenuItem onClick={toggleDropdown}>
               <FaServicestack /> Services
             </MenuItem>
             {isDropdownOpen && (
               <Dropdown>
-                <DropdownItem>Donor Management</DropdownItem>
-                <DropdownItem>Delivery Management</DropdownItem>
+                <DropdownItem as={Link} to="/donor-management">Donor Management</DropdownItem>
+                <DropdownItem as={Link} to="/delivery-management">Delivery Management</DropdownItem>
                 <SubDropdown>
                   <DropdownItem>Request Management</DropdownItem>
                   <SubDropdownContent>
@@ -65,24 +80,38 @@ const Dashboard = ({children}) => {
                     <DropdownItem as={Link} to="/dashboard/manage-requests">Manage Request</DropdownItem>
                   </SubDropdownContent>
                 </SubDropdown>
-                <DropdownItem>Inventory Management</DropdownItem>
-                <DropdownItem>Settlement Management</DropdownItem>
+                <SubDropdown>
+                  <DropdownItem>Inventory Management</DropdownItem>
+                  <SubDropdownContent>
+                    <DropdownItem as={Link} to="/dashboard/bloodunit">Blood Units</DropdownItem>
+                    <DropdownItem>Update Inventory</DropdownItem>
+                  </SubDropdownContent>
+                </SubDropdown>
+                <SubDropdown>
+                  <DropdownItem>Settlement Management</DropdownItem>
+                  <SubDropdownContent>
+                    <DropdownItem as={Link} to="/dashboard/transfer">Transfer</DropdownItem>
+                  </SubDropdownContent>
+                </SubDropdown>
               </Dropdown>
             )}
           </ServicesMenu>
 
-          <MenuItem><FaUser /> Profile</MenuItem>
-          <MenuItem onClick={toggleNotification}><FaBell /></MenuItem>
-          {/* Logout button */}
-          <MenuItem onClick={handleLogout}><FaSignOutAlt /> Logout</MenuItem>
+          <MenuItem as={Link} to="/dashboard/profile">
+            <FaUser /> Profile
+          </MenuItem>
+          <MenuItem onClick={toggleNotification}>
+            <FaBell />
+          </MenuItem>
+          <MenuItem onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </MenuItem>
         </Menu>
       </Header>
 
-      <MainContent>
-        {children}
-      </MainContent>
+      {/* Update MainContent based on currentPath */}
+      <MainContent key={currentPath}>{children}</MainContent>
 
-      {/* Render the notification sidebar only when it's open */}
       {isNotificationOpen && (
         <>
           <NotificationSidebar>
@@ -102,6 +131,7 @@ const Dashboard = ({children}) => {
   );
 };
 
+
 const DashboardContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -118,6 +148,7 @@ const Header = styled.header`
   top: 0;
   left: 0;
   right: 0;
+  z-index: 1000;
   display: flex;
   justify-content: space-between;
   align-items: center;

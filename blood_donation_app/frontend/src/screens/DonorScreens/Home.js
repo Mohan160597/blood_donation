@@ -15,7 +15,7 @@ const bloodBagIcon = require('../blood-bag.png');   // Adjust the path
 const notifications = [
   {
     id: 1,
-    bloodGroup: 'AB+',
+    bloodGroup: 'A+',
     units: '0.3 Unit',
     date: '25/09/2024',
   },

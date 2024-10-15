@@ -23,7 +23,7 @@ export default function RequestsScreen() {
   const [notifications, setNotifications] = useState([
     {
       id: 1,
-      bloodGroup: 'AB+',
+      bloodGroup: 'A+',
       units: '0.3 Unit',
       distance: '3 Km',
       hospitalName: 'City Hospital',

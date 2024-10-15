@@ -133,7 +133,7 @@ class Hospital(AbstractBaseUser, PermissionsMixin):
     contact_info = models.CharField(max_length=100)
     address = models.TextField()
     documents = models.FileField(upload_to='hospital_documents/')
-    approval_status = models.CharField(max_length=10, choices=APPROVAL_STATUS_CHOICES, default='pending')
+    approval_status = models.CharField(max_length=10, choices=APPROVAL_STATUS_CHOICES, default='approved')
     rejection_reason = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)  # Hospital admin users
@@ -190,5 +190,73 @@ class BloodRequest(models.Model):
         self.status = 'fulfilled'
         self.fulfilled_at = timezone.now()
         self.save()
+
+
+# Model for Blood Unit Inventory
+class BloodUnit(models.Model):
+    BLOOD_TYPE_CHOICES = [
+        ('A+', 'A+'),
+        ('A-', 'A-'),
+        ('B+', 'B+'),
+        ('B-', 'B-'),
+        ('AB+', 'AB+'),
+        ('AB-', 'AB-'),
+        ('O+', 'O+'),
+        ('O-', 'O-'),
+    ]
+
+    STATUS_CHOICES = [
+        ('available', 'Available'),
+        ('expired', 'Expired'),
+        ('used', 'Used'),
+        ('transferred', 'Transferred'),
+    ]
+
+    blood_type = models.CharField(max_length=3, choices=BLOOD_TYPE_CHOICES)
+    quantity = models.IntegerField()
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name='blood_inventory')
+    expiration_date = models.DateField()
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='available')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.quantity} units of {self.blood_type} at {self.hospital.hospital_name}"
+
+    def check_expiration(self):
+        """
+        Mark the blood unit as expired if the expiration date has passed.
+        """
+        if self.expiration_date < timezone.now().date():
+            self.status = 'expired'
+            self.save()
+
+    def is_nearing_expiration(self, days_before=7):
+        """
+        Returns True if the blood unit is nearing expiration within the given days.
+        """
+        return timezone.now().date() >= self.expiration_date - timedelta(days=days_before)
+
+    def mark_used(self):
+        self.status = 'used'
+        self.save()
+
+    def mark_transferred(self):
+        self.status = 'transferred'
+        self.save()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

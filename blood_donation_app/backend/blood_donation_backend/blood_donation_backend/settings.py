@@ -177,7 +177,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True  # For testing, allow all origins. Restrict this in production.
 
-ALLOWED_HOSTS = ['192.168.35.11', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['192.168.35.11', 'localhost', '127.0.0.1', '192.168.1.124']
 
 import os
 # Media settings
@@ -193,7 +193,10 @@ FIREBASE_SERVICE_ACCOUNT_KEY = os.path.join(BASE_DIR, "C:/Users/mohan/firebase/b
 
 # Initialize Firebase Admin SDK if not already initialized
 if not firebase_admin._apps:
-    print("Initializing Firebase Admin SDK...")
+    #print("Initializing Firebase Admin SDK...")
     cred = credentials.Certificate(FIREBASE_SERVICE_ACCOUNT_KEY)
     firebase_admin.initialize_app(cred)
-    print("Firebase Admin SDK initialized successfully.")
+    #print("Firebase Admin SDK initialized successfully.")
+
+
+

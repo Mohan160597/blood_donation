@@ -1,9 +1,9 @@
 from rest_framework import status, generics
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .serializers import (
@@ -14,10 +14,15 @@ from .serializers import (
     HospitalSerializer, 
     HospitalLoginSerializer, 
     BloodRequestSerializer,
+    BloodUnitSerializer,
 )
-from .models import Donor, DeliveryStaff, Hospital, BloodRequest
+from .models import Donor, DeliveryStaff, Hospital, BloodRequest, BloodUnit
 from django.utils import timezone
-from firebase_admin import messaging
+from django.db.models import Sum, Case, When, BooleanField, Value, IntegerField
+from datetime import timedelta
+from django.db.models.functions import Coalesce, Cast
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 
 
@@ -61,6 +66,22 @@ class DonorLoginView(APIView):
                 return Response({"error": "Invalid login credentials."}, status=status.HTTP_400_BAD_REQUEST)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class DonorDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = DonorSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        # Get the authenticated donor based on email
+        print(f"Request user: {self.request.user.email}")
+        try:
+            donor = Donor.objects.get(email=self.request.user.email)
+            return donor
+        except Donor.DoesNotExist:
+            raise NotFound("Donor not found for this user.")
+
 
 
 # Delivery staff login view
@@ -118,7 +139,7 @@ class HospitalLoginView(APIView):
             )
             
             if hospital is not None:
-                #print(f"Authenticated user: {hospital} (type: {type(hospital)})")
+                print(f"Authenticated user: {hospital}")
                 # Generate JWT tokens for the hospital user
                 refresh = RefreshToken.for_user(hospital)
                 return Response({
@@ -130,6 +151,28 @@ class HospitalLoginView(APIView):
                 return Response({"error": "Invalid login credentials."}, status=status.HTTP_400_BAD_REQUEST)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# View for retrieving hospital details
+class HospitalDetailView(APIView):
+    permission_classes = [IsAuthenticated]  # Only authenticated users can access this view
+
+    def get(self, request):
+        # Get the authenticated hospital user
+        hospital = request.user
+        
+        # Serialize the hospital data
+        serializer = HospitalSerializer(hospital)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+
+
+
+        
+
 
 
 # View for listing and creating blood requests (only for hospitals)
@@ -190,6 +233,11 @@ class BloodRequestListCreateView(generics.ListCreateAPIView):
               except Exception as e:
                 print(f"Failed to send notification to {donor.email}: {e}")
 
+
+    
+       
+
+
 # View for retrieving, updating, and deleting blood requests
 class BloodRequestDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = BloodRequestSerializer
@@ -219,7 +267,137 @@ class BloodRequestDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 
-class DonorDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Donor.objects.all()
-    serializer_class = DonorSerializer
-    lookup_field = 'id'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# View for listing available blood Types and Units
+class BloodUnitSummaryView(generics.ListAPIView):
+    """
+    View for listing available blood units, summarized by blood type, including low stock alerts.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        hospital = self.request.user
+
+        # Summarize available units by blood type
+        return BloodUnit.objects.filter(hospital=hospital, status='available')\
+            .values('blood_type')\
+            .annotate(total_quantity=Coalesce(Sum('quantity'), 0))
+
+    def list(self, request, *args, **kwargs):
+        """
+        Custom response for each blood type with low stock alerts.
+        """
+        queryset = self.get_queryset()
+        low_stock_threshold = 5
+        response_data = []
+
+        for blood_type_data in queryset:
+            blood_type = blood_type_data['blood_type']
+            total_quantity = blood_type_data['total_quantity']
+            
+            # Determine if low stock alert should be triggered
+            low_stock_alert = total_quantity < low_stock_threshold
+
+            response_data.append({
+                'blood_type': blood_type,
+                'total_quantity': total_quantity,
+                'low_stock_alert': low_stock_alert
+            })
+
+        return Response(response_data)
+
+
+# 2. Individual Blood Type View (with expiration dates)
+class BloodUnitByTypeView(generics.ListAPIView):
+    """
+    View for listing all blood units of a specific blood type, with expiration details.
+    """
+    serializer_class = BloodUnitSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        blood_type = self.kwargs['blood_type']
+        hospital = self.request.user
+        return BloodUnit.objects.filter(hospital=hospital, blood_type=blood_type, status='available')
+
+    def list(self, request, *args, **kwargs):
+        """
+        Add expiration detail logic for units of the requested blood type.
+        """
+        queryset = self.get_queryset()
+        response_data = []
+
+        for blood_unit in queryset:
+            days_to_expire = (blood_unit.expiration_date - timezone.now().date()).days
+            response_data.append({
+                'id': blood_unit.id,
+                'blood_type': blood_unit.blood_type,
+                'quantity': blood_unit.quantity,
+                'expiration_date': blood_unit.expiration_date,
+                'days_to_expire': days_to_expire
+            })
+
+        return Response(response_data)
+
+
+# 3. Blood Unit CRUD View
+class BloodUnitCRUDView(generics.RetrieveUpdateDestroyAPIView, generics.ListCreateAPIView):
+    """
+    View for creating, retrieving, updating, and deleting blood units.
+    """
+    queryset = BloodUnit.objects.all()
+    serializer_class = BloodUnitSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'pk'
+
+    def get_queryset(self):
+        hospital = self.request.user
+        return BloodUnit.objects.filter(hospital=hospital)
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Handle the creation of new blood units.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(hospital=self.request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        """
+        Handle updating blood units.
+        """
+        instance = self.get_object()
+        data = request.data
+        serializer = self.get_serializer(instance, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Handle deletion of blood units.
+        """
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+
+

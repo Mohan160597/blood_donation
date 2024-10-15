@@ -5,7 +5,8 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-//import API_BASE_URL from './apiconfig';
+// Import API_BASE_URL from a separate configuration file for API URLs
+// import { API_BASE_URL } from './apiconfig';
 
 export default function DonorLoginPage({ route }) {
   const { role } = route?.params || {}; // Safe handling if route.params is undefined
@@ -15,56 +16,61 @@ export default function DonorLoginPage({ route }) {
   const [isLoading, setIsLoading] = useState(false); // Loading state for the login process
   const navigation = useNavigation();
 
-  // Function to handle saving JWT tokens securely
-  const storeTokens = async (access, refresh) => {
-    try {
-      await AsyncStorage.multiSet([
-        ['@access_token', access],
-        ['@refresh_token', refresh],
-      ]);
-    } catch (error) {
-      console.error('Error saving tokens', error);
-    }
-  };
+// Function to handle saving donor ID along with JWT tokens securely
+const storeTokens = async (access, refresh) => {
+  try {
+    await AsyncStorage.multiSet([
+      ['@access_token', access],
+      ['@refresh_token', refresh],
+      
+    ]);
+  } catch (error) {
+    console.error('Error saving tokens and donor ID', error);
+  }
+};
 
   const handleLogin = async () => {
+    // Simple validation to ensure both fields are filled
     if (!email || !password) {
       Alert.alert('Validation Error', 'Please fill in both email and password fields.');
       return;
     }
 
-    setIsLoading(true); // Start loading
+    setIsLoading(true); // Start loading indicator
 
     try {
-      const response = await axios.post('http://192.168.35.11:8000/api/login/donor/', {
+      // Send login request to the backend
+      const response = await axios.post('http://192.168.1.124:8000/api/login/donor/', {
         email,
         password,
       });
 
       if (response.status === 200) {
         const { access, refresh } = response.data;
-        await storeTokens(access, refresh);
+        await storeTokens(access, refresh); // Store tokens
 
         Alert.alert('Login Success', 'You are now logged in.');
         navigation.reset({
           index: 0,
-          routes: [{ name: 'DonorDashboard' }],
+          routes: [{ name: 'DonorDashboard' }], // Reset navigation stack to DonorDashboard
         });
       }
     } catch (error) {
+      // Handle errors during login
       if (error.response && error.response.data) {
         Alert.alert('Login Error', error.response.data.detail || 'Invalid email or password.');
       } else {
         Alert.alert('Login Error', 'Something went wrong. Please try again.');
       }
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false); // Stop loading indicator
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login as Donor</Text>
+      
       <TextInput
         placeholder="Email"
         value={email}
@@ -75,7 +81,7 @@ export default function DonorLoginPage({ route }) {
         placeholderTextColor="black"
       />
 
-      {/* Password input with eye icon inside */}
+      {/* Password input with eye icon for visibility toggle */}
       <View style={styles.passwordContainer}>
         <TextInput
           placeholder="Password"
@@ -86,13 +92,14 @@ export default function DonorLoginPage({ route }) {
           placeholderTextColor="black"
         />
         <TouchableOpacity
-          onPress={() => setPasswordVisible(!passwordVisible)}
+          onPress={() => setPasswordVisible(!passwordVisible)} // Toggle password visibility
           style={styles.eyeIcon}
         >
           <FontAwesomeIcon icon={passwordVisible ? faEye : faEyeSlash} size={24} color="black" />
         </TouchableOpacity>
       </View>
 
+      {/* Display loading indicator while logging in */}
       {isLoading ? (
         <ActivityIndicator size="large" color="#0000ff" />
       ) : (
@@ -127,7 +134,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     borderRadius: 4,
     fontSize: 16,
-    color: 'black'
+    color: 'black',
   },
   passwordContainer: {
     position: 'relative',
@@ -137,15 +144,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     padding: 10,
-    paddingRight: 40, // Add some padding to the right to avoid the icon overlapping text
+    paddingRight: 40, // Add padding to avoid icon overlap with text
     borderRadius: 4,
     fontSize: 16,
-    color: 'black'
+    color: 'black',
   },
   eyeIcon: {
     position: 'absolute',
-    right: 10, // Position the icon to the right inside the TextInput
-    top: 15,   // Adjust the vertical alignment to the middle of the TextInput
+    right: 10, // Position the icon inside TextInput
+    top: 15,   // Adjust vertical alignment to center the icon
   },
   link: {
     color: 'blue',

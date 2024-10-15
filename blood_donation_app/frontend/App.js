@@ -22,6 +22,7 @@ function App()  {
         <Stack.Screen name="DonorLogin" component={DonorLoginPage} />
         <Stack.Screen name="DeliveryStaffLogin" component={DeliveryStaffLoginPage} />
         <Stack.Screen name="SignUp" component={SignUpPage} options={{ headerShown: true }}/>
+        <Stack.Screen name="DonorRegistration" component={SignUpPage} options={{ headerShown: true }} />
         <Stack.Screen name="Confirmation" component={ConfirmationScreen} />
         <Stack.Screen name="DonorDashboard" component={DonorDashboard} />
       </Stack.Navigator>

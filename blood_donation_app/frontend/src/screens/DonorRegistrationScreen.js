@@ -52,7 +52,7 @@ const DonorRegistrationScreen = () => {
 
   const handleRegister = async (values) => {
     try {
-      const response = await axios.post('http://192.168.94.11:8000/api/register/donor/', values);
+      const response = await axios.post('http://192.168.1.124:8000/api/register/donor/', values);
 
       if (response.status === 201) {
         navigation.navigate('Confirmation', { role: 'donor' });
@@ -85,7 +85,7 @@ const DonorRegistrationScreen = () => {
         {({ handleChange, handleBlur, handleSubmit, setFieldValue, values, errors, touched }) => (
           <View style={styles.container}>
             
-            <Text style={styles.label}>First Name</Text>
+            <Text style={styles.label}>First Name *</Text>
             <TextInput
               style={styles.input}
               onChangeText={handleChange('firstname')}
@@ -95,7 +95,7 @@ const DonorRegistrationScreen = () => {
             />
             {errors.firstname && touched.firstname && <Text style={styles.error}>{errors.firstname}</Text>}
 
-            <Text style={styles.label}>Last Name</Text>
+            <Text style={styles.label}>Last Name *</Text>
             <TextInput
               style={styles.input}
               onChangeText={handleChange('lastname')}
@@ -105,7 +105,7 @@ const DonorRegistrationScreen = () => {
             />
             {errors.lastname && touched.lastname && <Text style={styles.error}>{errors.lastname}</Text>}
 
-            <Text style={styles.label}>Date of Birth</Text>
+            <Text style={styles.label}>Date of Birth *</Text>
             <TextInput
               style={styles.input}
               onChangeText={handleChange('dob')}
@@ -116,7 +116,7 @@ const DonorRegistrationScreen = () => {
             {errors.dob && touched.dob && <Text style={styles.error}>{errors.dob}</Text>}
 
             {/* Gender and Blood Type */}
-            <Text style={styles.label}>Gender</Text>
+            <Text style={styles.label}>Gender *</Text>
             <RNPickerSelect
               style={pickerSelectStyles}
               onValueChange={(value) => setFieldValue('gender', value)}
@@ -130,7 +130,18 @@ const DonorRegistrationScreen = () => {
             />
             {errors.gender && touched.gender && <Text style={styles.error}>{errors.gender}</Text>}
 
-            <Text style={styles.label}>Blood Type</Text>
+
+            <Text style={styles.label}>Email *</Text>
+            <TextInput
+              style={styles.input}
+              onChangeText={handleChange('email')}
+              onBlur={handleBlur('email')}
+              value={values.email}
+              placeholder="Enter your email"
+            />
+            {errors.email && touched.email && <Text style={styles.error}>{errors.email}</Text>}
+
+            <Text style={styles.label}>Blood Type *</Text>
             <RNPickerSelect
               style={pickerSelectStyles}
               onValueChange={(value) => setFieldValue('blood_type', value)}
@@ -150,7 +161,7 @@ const DonorRegistrationScreen = () => {
             {errors.blood_type && touched.blood_type && <Text style={styles.error}>{errors.blood_type}</Text>}
 
             {/* Phone and Password Fields */}
-            <Text style={styles.label}>Phone Number</Text>
+            <Text style={styles.label}>Phone Number *</Text>
             <TextInput
               style={styles.input}
               onChangeText={handleChange('phone_number')}
@@ -160,7 +171,7 @@ const DonorRegistrationScreen = () => {
             />
             {errors.phone_number && touched.phone_number && <Text style={styles.error}>{errors.phone_number}</Text>}
 
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>Password *</Text>
             <View style={styles.passwordContainer}>
               <TextInput
                 style={styles.input}
@@ -176,7 +187,7 @@ const DonorRegistrationScreen = () => {
             </View>
             {errors.password && touched.password && <Text style={styles.error}>{errors.password}</Text>}
 
-            <Text style={styles.label}>Confirm Password</Text>
+            <Text style={styles.label}>Confirm Password *</Text>
             <View style={styles.passwordContainer}>
               <TextInput
                 style={styles.input}

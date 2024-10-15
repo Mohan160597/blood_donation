@@ -35,7 +35,7 @@ export default function DonorLoginPage({ route }) {
     setIsLoading(true); // Start loading
 
     try {
-      const response = await axios.post('http://192.168.94.11:8000/api/login/deliverystaff/', {
+      const response = await axios.post('http://192.168.1.124:8000/api/login/deliverystaff/', {
         email,
         password,
       });

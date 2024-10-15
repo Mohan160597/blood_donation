@@ -23,7 +23,7 @@ const Login = () => {
     setLoading(true);
     try {
       // Send a POST request to the login endpoint with the form data
-      const response = await axios.post('http://192.168.35.11:8000/api/login/hospital/', formData);
+      const response = await axios.post('http://192.168.1.124:8000/api/login/hospital/', formData);
 
       // Handle the response based on the approval status
       if (response.data.status === 'pending') {

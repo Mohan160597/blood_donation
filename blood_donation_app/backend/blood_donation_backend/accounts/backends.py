@@ -5,12 +5,14 @@ from django.contrib.auth.backends import ModelBackend
 
 class DonorBackend(BaseBackend):
     def authenticate(self, request, email=None, password=None, **kwargs):
+        print(f"Authenticating donor with email: {email}")  # Debug line
         try:
             donor = Donor.objects.get(email=email)
-            if donor.check_password(password):  # Password is hashed and checked using Django's method
+            if donor.check_password(password):
+                print("Authentication successful")  # Debug line
                 return donor
         except Donor.DoesNotExist:
-            return None
+            print("Donor does not exist")  # Debug line
         return None
 
     def get_user(self, user_id):

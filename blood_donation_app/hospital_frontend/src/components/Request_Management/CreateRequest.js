@@ -33,12 +33,13 @@ const CreateBloodRequest = () => {
       }
 
       // Send a POST request to create a blood request
-      const response = await axios.post('http://192.168.35.11:8000/api/blood-requests/', formData, {
+      const response = await axios.post('http://192.168.1.124:8000/api/blood-requests/', formData, {
         headers: {
           Authorization: `Bearer ${accessToken}`, // Pass JWT in the Authorization header
         },
       });
 
+      console.log(response.data);
       setMessage('Blood request created successfully!');
     } catch (error) {
       console.error('Error:', error.response ? error.response.data : error.message);
@@ -96,60 +97,82 @@ const CreateBloodRequest = () => {
   );
 };
 
-// Styled components remain the same
-
-
 // Styled components
-
 const FormContainer = styled.div`
   max-width: 600px;
   margin: 50px auto;
-  padding: 20px;
+  padding: 30px; /* Increased padding for better spacing */
   background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 10px; /* Increased border-radius for softer corners */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  font-family: 'Arial', sans-serif; /* Use a clean, modern font */
+  text-align: center; /* Center text in the container */
 `;
 
 const InputLabel = styled.label`
   display: block;
   margin-bottom: 10px;
   font-size: 16px;
+  text-align: left; /* Align label text to the left */
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 10px;
+  padding: 12px; /* Increased padding for inputs */
   margin-top: 5px;
   margin-bottom: 20px;
-  border-radius: 4px;
+  border-radius: 6px; /* Increased border-radius */
   border: 1px solid #ccc;
+  font-size: 16px; /* Consistent font size */
+  transition: border 0.3s;
+
+  &:focus {
+    border: 1px solid #007bff; /* Change border color on focus */
+    outline: none; /* Remove outline */
+  }
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 10px;
+  padding: 12px; /* Increased padding for select */
   margin-top: 5px;
   margin-bottom: 20px;
-  border-radius: 4px;
+  border-radius: 6px; /* Increased border-radius */
   border: 1px solid #ccc;
+  font-size: 16px; /* Consistent font size */
+  transition: border 0.3s;
+
+  &:focus {
+    border: 1px solid #007bff; /* Change border color on focus */
+    outline: none; /* Remove outline */
+  }
 `;
 
 const Button = styled.button`
-  padding: 10px 20px;
+  padding: 12px 20px; /* Increased padding */
   background-color: #007bff;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px; /* Increased border-radius */
   cursor: pointer;
+  font-size: 16px; /* Consistent font size */
+  transition: background-color 0.3s;
 
   &:hover {
-    background-color: #0056b3;
+    background-color: #0056b3; /* Darker shade on hover */
+  }
+
+  &:disabled {
+    background-color: #007bff99; /* Lighter shade when disabled */
+    cursor: not-allowed; /* Change cursor style */
   }
 `;
 
 const Message = styled.p`
   color: ${(props) => (props.error ? 'red' : 'green')};
   text-align: center;
+  margin-bottom: 20px; /* Spacing below the message */
+  font-size: 18px; /* Larger font for message */
 `;
 
 export default CreateBloodRequest;

@@ -6,7 +6,10 @@ import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import CreateRequest from './components/Request_Management/CreateRequest';
 import ManageRequests from './components/Request_Management/ManageRequests';
-
+import BloodUnit from './components/Inventory_Management/BloodUnit';
+import Transfer from './components/Settlement_Management/Transfer';
+import Profile from './components/Profile';
+import Home from './components/Home';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -32,6 +35,8 @@ function App() {
           {/* Route for the hospital login */}
           <Route path="/login" element={<Login />} />
 
+          
+
           {/* Routes inside the Dashboard */}
           {isAuthenticated ? (
             <Route
@@ -41,6 +46,10 @@ function App() {
                   <Routes>
                     <Route path="create-requests" element={<CreateRequest />} />
                     <Route path="manage-requests" element={<ManageRequests />} />
+                    <Route path="bloodunit" element={<BloodUnit />} />
+                    <Route path="transfer" element={<Transfer />} />
+                    <Route path="/home" element={<Home />} />
+                    <Route path="/profile" element={<Profile />}  />
                   </Routes>
                 </Dashboard>
               }
@@ -48,6 +57,8 @@ function App() {
           ) : (
             <Route path="*" element={<Login />} />
           )}
+
+           
 
           {/* Fallback for undefined routes */}
           <Route path="*" element={<h1>404 Not Found</h1>} />

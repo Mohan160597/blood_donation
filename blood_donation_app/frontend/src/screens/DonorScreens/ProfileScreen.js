@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,19 +7,73 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ScrollView, // Import ScrollView
 } from 'react-native';
-import {launchImageLibrary} from 'react-native-image-picker'; // Import the new API
+import { launchImageLibrary } from 'react-native-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 export default function ProfileScreen() {
-  const [profilePic, setProfilePic] = useState(null); // State for profile pic
-  const [isEditing, setIsEditing] = useState(false); // State to toggle between viewing and editing
+  const [profilePic, setProfilePic] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [userInfo, setUserInfo] = useState({
-    bloodGroup: 'A +ve',
-    age: '23 year',
-    weight: '50 kg',
-    contactNo: '1234567890',
-    email: 'abcd1@gmail.com',
+    firstname: '',
+    lastname: '',
+    dob: '',
+    gender: '',
+    email: '',
+    bloodType: '',
+    phoneNumber: '',
   });
+
+  useEffect(() => {
+    // Fetch user details when the component mounts
+    getAccessTokenAndFetchDetails();
+  }, []);
+
+  // Fetch the access token and then fetch user details
+  const getAccessTokenAndFetchDetails = async () => {
+    try {
+      const accessToken = await AsyncStorage.getItem('@access_token');
+      if (accessToken) {
+        fetchUserDetails(accessToken);
+      } else {
+        Alert.alert('Error', 'Access token not found.');
+      }
+    } catch (error) {
+      console.log('Error retrieving access token:', error);
+    }
+  };
+
+  // Fetch user details
+  const fetchUserDetails = async (accessToken) => {
+    try {
+      const response = await axios.get(`http://192.168.1.124:8000/api/donor/`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const userData = response.data;
+
+      // Set user information
+      setUserInfo({
+        firstname: userData.firstname || '',
+        lastname: userData.lastname || '',
+        dob: userData.dob || '',
+        gender: userData.gender || '',
+        email: userData.email || '',
+        bloodType: userData.blood_type || '',
+        phoneNumber: userData.phone_number || '',
+      });
+
+      // If there’s a profile picture in the response, set it
+      if (userData.profile_picture) {
+        setProfilePic({ uri: userData.profile_picture });
+      }
+    } catch (error) {
+      console.log('Error fetching user details:', error);
+    }
+  };
 
   // Function to handle profile picture update
   const handleProfilePicUpdate = () => {
@@ -33,23 +87,35 @@ export default function ProfileScreen() {
       } else if (response.errorCode) {
         console.log('ImagePicker Error: ', response.errorMessage);
       } else {
-        const source = {uri: response.assets[0].uri}; // Use `response.assets` for the image
+        const source = { uri: response.assets[0].uri };
         setProfilePic(source);
       }
     });
   };
 
-  // Function to handle profile info editing
-  const handleSaveChanges = () => {
-    setIsEditing(false);
-    Alert.alert(
-      'Profile Updated',
-      'Your profile has been updated successfully.',
-    );
+  // Function to handle saving updated user information
+  const handleSave = async () => {
+    const accessToken = await AsyncStorage.getItem('@access_token');
+    if (accessToken) {
+      try {
+        await axios.put(`http://192.168.1.124:8000/api/donor/`, userInfo, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        Alert.alert('Success', 'Profile updated successfully.');
+        setIsEditing(false); // Exit editing mode after saving
+      } catch (error) {
+        console.log('Error updating user details:', error);
+        Alert.alert('Error', 'Failed to update profile.');
+      }
+    } else {
+      Alert.alert('Error', 'Access token not found.');
+    }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       {/* Profile Picture */}
       <TouchableOpacity
         onPress={handleProfilePicUpdate}
@@ -58,7 +124,7 @@ export default function ProfileScreen() {
           <Image source={profilePic} style={styles.profilePic} />
         ) : (
           <Image
-            source={{uri: 'https://example.com/default-profile-pic.png'}} // Default profile pic URL
+            source={{ uri: 'https://example.com/default-profile-pic.png' }}
             style={styles.profilePic}
           />
         )}
@@ -67,105 +133,127 @@ export default function ProfileScreen() {
       {/* Info Card */}
       <View style={styles.infoCard}>
         <View style={styles.infoHeader}>
-          <Text style={styles.infoTitle}>Info</Text>
+          <Text style={styles.infoTitle}>Profile</Text>
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => setIsEditing(!isEditing)}>
+            onPress={() => {
+              if (isEditing) {
+                handleSave(); // Save the changes if editing
+              } else {
+                setIsEditing(true); // Enable editing
+              }
+            }}>
             <Text style={styles.editButtonText}>
               {isEditing ? 'Save' : 'Edit'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Editable Information */}
-        {isEditing ? (
-          <View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Blood Group</Text>
+        {/* Display or Edit User Information */}
+        <View style={styles.infoList}>
+          <View style={styles.card}>
+            <Text style={styles.infoLabel}>Name:</Text>
+            {isEditing ? (
               <TextInput
-                style={styles.infoValue}
-                value={userInfo.bloodGroup}
+                style={styles.infoInput}
+                value={`${userInfo.firstname} ${userInfo.lastname}`}
+                onChangeText={text => {
+                  const [firstname, lastname] = text.split(' ');
+                  setUserInfo(prev => ({
+                    ...prev,
+                    firstname: firstname || '',
+                    lastname: lastname || '',
+                  }));
+                }}
+              />
+            ) : (
+              <Text style={styles.infoValue}>
+                {userInfo.firstname} {userInfo.lastname}
+              </Text>
+            )}
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.infoLabel}>DOB:</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.infoInput}
+                value={userInfo.dob}
                 onChangeText={text =>
-                  setUserInfo(prev => ({...prev, bloodGroup: text}))
+                  setUserInfo(prev => ({ ...prev, dob: text }))
                 }
               />
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Age</Text>
+            ) : (
+              <Text style={styles.infoValue}>{userInfo.dob}</Text>
+            )}
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.infoLabel}>Gender:</Text>
+            {isEditing ? (
               <TextInput
-                style={styles.infoValue}
-                value={userInfo.age}
+                style={styles.infoInput}
+                value={userInfo.gender}
                 onChangeText={text =>
-                  setUserInfo(prev => ({...prev, age: text}))
+                  setUserInfo(prev => ({ ...prev, gender: text }))
                 }
               />
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Weight</Text>
+            ) : (
+              <Text style={styles.infoValue}>{userInfo.gender}</Text>
+            )}
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.infoLabel}>Email:</Text>
+            {isEditing ? (
               <TextInput
-                style={styles.infoValue}
-                value={userInfo.weight}
-                onChangeText={text =>
-                  setUserInfo(prev => ({...prev, weight: text}))
-                }
-              />
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Contact No.</Text>
-              <TextInput
-                style={styles.infoValue}
-                value={userInfo.contactNo}
-                onChangeText={text =>
-                  setUserInfo(prev => ({...prev, contactNo: text}))
-                }
-              />
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Email</Text>
-              <TextInput
-                style={styles.infoValue}
+                style={styles.infoInput}
                 value={userInfo.email}
                 onChangeText={text =>
-                  setUserInfo(prev => ({...prev, email: text}))
+                  setUserInfo(prev => ({ ...prev, email: text }))
                 }
               />
-            </View>
-          </View>
-        ) : (
-          <View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Blood Group</Text>
-              <Text style={styles.infoValue}>{userInfo.bloodGroup}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Age</Text>
-              <Text style={styles.infoValue}>{userInfo.age}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Weight</Text>
-              <Text style={styles.infoValue}>{userInfo.weight}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Contact No.</Text>
-              <Text style={styles.infoValue}>{userInfo.contactNo}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Email</Text>
+            ) : (
               <Text style={styles.infoValue}>{userInfo.email}</Text>
-            </View>
+            )}
           </View>
-        )}
+          <View style={styles.card}>
+            <Text style={styles.infoLabel}>Blood Type:</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.infoInput}
+                value={userInfo.bloodType}
+                onChangeText={text =>
+                  setUserInfo(prev => ({ ...prev, bloodType: text }))
+                }
+              />
+            ) : (
+              <Text style={styles.infoValue}>{userInfo.bloodType}</Text>
+            )}
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.infoLabel}>Phone Number:</Text>
+            {isEditing ? (
+              <TextInput
+                style={styles.infoInput}
+                value={userInfo.phoneNumber}
+                onChangeText={text =>
+                  setUserInfo(prev => ({ ...prev, phoneNumber: text }))
+                }
+              />
+            ) : (
+              <Text style={styles.infoValue}>{userInfo.phoneNumber}</Text>
+            )}
+          </View>
+        </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+    flexGrow: 1, // Allow the container to grow
     alignItems: 'center',
     justifyContent: 'center',
+    padding: 20, // Add padding for better spacing
   },
   profilePicContainer: {
     alignItems: 'center',
@@ -179,12 +267,12 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
   },
   infoCard: {
-    width: '90%',
+    width: '100%', // Use full width
     backgroundColor: '#ffe0e0',
     borderRadius: 10,
     padding: 20,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
   },
@@ -199,17 +287,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   editButton: {
-    backgroundColor: '#f00',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    backgroundColor: '#007bff',
+    padding: 10,
     borderRadius: 5,
   },
   editButtonText: {
     color: '#fff',
-    fontSize: 14,
   },
-  infoItem: {
+  infoList: {
+    marginVertical: 10,
+  },
+  card: {
     marginBottom: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    backgroundColor: '#fff',
   },
   infoLabel: {
     fontSize: 16,
@@ -217,20 +311,13 @@ const styles = StyleSheet.create({
   },
   infoValue: {
     fontSize: 16,
-    color: '#333',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    padding: 5,
+    marginTop: 5,
   },
-  logoutButton: {
-    marginTop: 30,
-    backgroundColor: '#f00',
-    paddingVertical: 10,
-    paddingHorizontal: 40,
+  infoInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
     borderRadius: 5,
-  },
-  logoutButtonText: {
-    color: '#fff',
-    fontSize: 16,
+    padding: 10,
+    marginTop: 5,
   },
 });

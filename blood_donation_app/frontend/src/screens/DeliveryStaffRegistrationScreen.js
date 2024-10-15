@@ -59,7 +59,7 @@ const DeliveryStaffRegistrationScreen = () => {
 
   const handleRegister = async (values) => {
     try {
-      const response = await axios.post('http://192.168.94.11:8000/api/register/deliverystaff/', {
+      const response = await axios.post('http://192.168.1.124:8000/api/register/deliverystaff/', {
         firstname: values.firstname,
         lastname: values.lastname,
         gender: values.gender,

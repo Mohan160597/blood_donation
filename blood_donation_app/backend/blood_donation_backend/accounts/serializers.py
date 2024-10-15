@@ -1,17 +1,19 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import Donor, DeliveryStaff, Hospital, BloodRequest
+from .models import Donor, DeliveryStaff, Hospital, BloodRequest, BloodUnit
+from django.utils import timezone
+from datetime import timedelta
 
-# Serializers for Donor authentication and registration
 class DonorSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    device_token = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Donor
-        fields = ['id', 'firstname', 'lastname', 'dob', 'gender', 'email', 'blood_type', 'phone_number', 'password']
+        fields = ['id', 'firstname', 'lastname', 'dob', 'gender', 'email', 'blood_type', 'phone_number', 'password', 'device_token']
+        read_only_fields = ['id', 'password', 'device_token']
 
     def create(self, validated_data):
-        # Create donor with hashed password
         donor = Donor.objects.create_user(
             email=validated_data['email'],
             password=validated_data['password'],
@@ -20,9 +22,21 @@ class DonorSerializer(serializers.ModelSerializer):
             dob=validated_data['dob'],
             gender=validated_data['gender'],
             blood_type=validated_data['blood_type'],
-            phone_number=validated_data['phone_number']
+            phone_number=validated_data['phone_number'],
+            device_token=validated_data.get('device_token')
         )
         return donor
+
+    def update(self, instance, validated_data):
+        instance.firstname = validated_data.get('firstname', instance.firstname)
+        instance.lastname = validated_data.get('lastname', instance.lastname)
+        instance.dob = validated_data.get('dob', instance.dob)
+        instance.gender = validated_data.get('gender', instance.gender)
+        instance.blood_type = validated_data.get('blood_type', instance.blood_type)
+        instance.phone_number = validated_data.get('phone_number', instance.phone_number)
+        instance.device_token = validated_data.get('device_token', instance.device_token)
+        instance.save()
+        return instance
 
 
 # Serializers for Delivery staff authentication and registration
@@ -114,6 +128,13 @@ class BloodRequestSerializer(serializers.ModelSerializer):
         fields = ['id', 'hospital_name', 'blood_type', 'quantity', 'priority_level', 'contact_info', 'status', 'created_at', 'fulfilled_at']
         read_only_fields = ['id', 'hospital_name', 'contact_info', 'created_at', 'fulfilled_at']
 
+    
+    def create(self, validated_data):
+        request = self.context.get('request')
+        # Set the hospital automatically from the user's context
+       
+        return super().create(validated_data)
+
     def validate(self, data):
         if self.instance is None and data.get('status') and data['status'] != 'pending':
             raise serializers.ValidationError("New blood requests must start with status 'pending'.")
@@ -126,3 +147,47 @@ class BloodRequestSerializer(serializers.ModelSerializer):
         if value not in valid_blood_types:
             raise serializers.ValidationError("Invalid blood type.")
         return value
+
+
+
+
+
+
+# Serializer for blood units at hospitals
+class BloodUnitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BloodUnit
+        fields = ['id', 'blood_type', 'quantity', 'hospital', 'expiration_date', 'status', 'created_at']
+        read_only_fields = ['id', 'status', 'created_at']
+        extra_kwargs = {
+            'hospital': {'required': False},  # Mark hospital as not required
+            'expiration_date': {'required': False}  # Mark expiration_date as not required
+        }
+
+    def create(self, validated_data):
+        """
+        Override the create method to automatically assign an expiration date and hospital.
+        """
+        # Define the shelf life for blood units (e.g., 42 days)
+        shelf_life = timedelta(days=42)
+
+        # Automatically set the expiration date based on the current date and shelf life
+        validated_data['expiration_date'] = timezone.now().date() + shelf_life
+
+        return super().create(validated_data)
+
+    def validate(self, data):
+        """
+        Custom validation to ensure the quantity is valid.
+        """
+        if data['quantity'] <= 0:
+            raise serializers.ValidationError("Quantity must be greater than zero.")
+        
+        return data
+
+
+
+
+
+
+

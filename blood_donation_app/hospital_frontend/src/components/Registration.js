@@ -34,7 +34,7 @@ const Register = () => {
     }
 
     try {
-      const response = await axios.post('http://192.168.35.11:8000/api/register/hospital/', formDataToSend, {
+      const response = await axios.post('http://192.168.1.124:8000/api/register/hospital/', formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
